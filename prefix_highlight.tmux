@@ -12,11 +12,13 @@ output_prefix='@prefix_highlight_output_prefix'
 output_suffix='@prefix_highlight_output_suffix'
 show_copy_config='@prefix_highlight_show_copy_mode'
 copy_attr_config='@prefix_highlight_copy_mode_attr'
+fallback_config='@prefix_highlight_fallback'
 
 # Defaults
 default_fg='colour231'
 default_bg='colour04'
 default_copy_attr='fg=default,bg=yellow'
+default_fallback='#[default]'
 
 tmux_option() {
     local -r value=$(tmux show-option -gqv "$1")
@@ -38,6 +40,7 @@ highlight() {
         copy_highlight="$5" \
         output_prefix="$6" \
         output_suffix="$7" \
+        fallback_config="$8" \
         copy="Copy"
 
     local -r status_value="$(tmux_option "$status")"
@@ -45,12 +48,12 @@ highlight() {
     local -r copy_with_optional_affixes="$output_prefix$copy$output_suffix"
 
     if [[ "on" = "$show_copy_mode" ]]; then
-        local -r fallback="${copy_highlight}#{?pane_in_mode,$copy_with_optional_affixes,}"
+        local -r fallback="${copy_highlight}#{?pane_in_mode,$copy_with_optional_affixes,}$fallback_config"
     else
-        local -r fallback=""
+        local -r fallback="$fallback_config"
     fi
 
-    local -r highlight_on_prefix="${prefix_highlight}#{?client_prefix,$prefix_with_optional_affixes,$fallback}#[default]"
+    local -r highlight_on_prefix="${prefix_highlight}#{?client_prefix,$prefix_with_optional_affixes,$fallback}"
     tmux set-option -gq "$status" "${status_value/$place_holder/$highlight_on_prefix}"
 }
 
@@ -63,6 +66,7 @@ main() {
         output_prefix=$(tmux_option "$output_prefix" " ") \
         output_suffix=$(tmux_option "$output_suffix" " ") \
         copy_attr=$(tmux_option "$copy_attr_config" "$default_copy_attr")
+        fallback=$(tmux_option "$fallback_config" "$default_fallback")
 
     local -r short_prefix=$(
         echo "$prefix" | tr "[:lower:]" "[:upper:]" | sed 's/C-/\^/'
@@ -78,7 +82,8 @@ main() {
               "$show_copy_mode" \
               "$copy_highlight" \
               "$output_prefix" \
-              "$output_suffix"
+              "$output_suffix" \
+              "$fallback"
 
     highlight "status-left" \
               "$short_prefix" \
@@ -86,7 +91,8 @@ main() {
               "$show_copy_mode" \
               "$copy_highlight" \
               "$output_prefix" \
-              "$output_suffix"
+              "$output_suffix" \
+              "$fallback"
 }
 
 main
